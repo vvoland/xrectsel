@@ -81,39 +81,81 @@ static void error(const char *errstr, ...)
   va_end(ap);
 }
 
+#define ROUND(value, rounding) \
+    if (rounding > 0) \
+      value = (value / rounding) * rounding
+
+static void round_and_printu(unsigned int value, unsigned int rounding)
+{
+  ROUND(value, rounding);
+  printf("%u", value);
+}
+
+static void round_and_printi(int value, unsigned int rounding)
+{
+  ROUND(value, rounding);
+  printf("%i", value);
+}
+
+static unsigned int read_uint_until(const char** str_ptr, char stop_character)
+{
+  unsigned int value = 0;
+  const char* s = *str_ptr;
+  while((*(++s)) != stop_character) {
+    char c = *s;
+    if (c == '\0')
+      die("No matching %c found", stop_character);
+    if (c < '0' || c > '9')
+      die("Unexpected character %c\n", c);
+    int num = c - '0';
+    if(value != 0)
+      value *= 10;
+    value += num;
+  }
+  (*str_ptr) = s;
+  return value;
+}
+
 static int print_region_attr(const char *fmt, Region region)
 {
   const char *s;
+  unsigned int rounding;
 
   for (s = fmt; *s; ++s) {
+    rounding = 0;
     if (*s == '%') {
-      switch (*++s) {
+      ++s;
+      if (*s == '[') {
+        rounding = read_uint_until(&s, ']');
+        ++s;
+      }
+      switch (*s) {
         case '%':
           putchar('%');
           break;
         case 'x':
-          printf("%i", region.x);
+          round_and_printi(region.x, rounding);
           break;
         case 'y':
-          printf("%i", region.y);
+          round_and_printi(region.y, rounding);
           break;
         case 'X':
-          printf("%i", region.X);
+          round_and_printi(region.X, rounding);
           break;
         case 'Y':
-          printf("%i", region.Y);
+          round_and_printi(region.Y, rounding);
           break;
         case 'w':
-          printf("%u", region.w);
+          round_and_printu(region.w, rounding);
           break;
         case 'h':
-          printf("%u", region.h);
+          round_and_printu(region.h, rounding);
           break;
         case 'b':
-          printf("%u", region.b);
+          round_and_printu(region.b, rounding);
           break;
         case 'd':
-          printf("%u", region.d);
+          round_and_printu(region.d, rounding);
           break;
       }
     } else {
